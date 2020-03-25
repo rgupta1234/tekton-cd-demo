@@ -86,3 +86,13 @@ spec:
           else:
             print("Created git repo spring-petclinic-config")
 
+          # create git repo spring-petclinic-gatling
+          data_repo = '{"clone_addr": "https://github.com/siamaksade/spring-petclinic-gatling.git", "uid": 1, "repo_name": "spring-petclinic-gatling"}'
+          headers = {'Content-Type': 'application/json'}
+          resp = requests.post(url = gogsURL + "/api/v1/repos/migrate", headers = headers, auth = (gogs_user, gogs_pwd), data = data_repo)  
+
+          if resp.status_code != 200 and resp.status_code != 201:
+            print("Error creating git repo (status code: {})".format(resp.status_code))
+            print(resp.content)
+          else:
+            print("Created git repo spring-petclinic-gatling")

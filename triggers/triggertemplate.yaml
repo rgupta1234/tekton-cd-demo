@@ -25,17 +25,14 @@ spec:
     spec:
       pipelineRef:
         name: petclinic-deploy-dev
-      resources:
-      - name: app-git
-        resourceRef:
-          name: petclinic-git
-      - name: perf-tests-git
-        resourceRef:
-          name: petclinic-perf-tests-git
-      - name: app-image
-        resourceRef:
-          name: petclinic-image
+      params:
+      - name: APP_SOURCE_GIT
+        value: $(params.gitrepositoryurl)
+      - name: APP_SOURCE_REVISION
+        value: $(params.gitrevision)
       workspaces:
       - name: local-maven-repo
         persistentVolumeClaim:
           claimName: maven-repo-pvc
+      - name: job-workspace
+        emptyDir: {}

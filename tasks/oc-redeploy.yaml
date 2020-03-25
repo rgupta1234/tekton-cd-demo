@@ -1,0 +1,37 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: oc-redeploy
+spec:
+  inputs:
+    params:
+      - name: CONFIG_DIR
+        description: The subdirectory containing the configurations
+        type: string
+      - name: DEPLOYMENT_NAME
+        description: The name of deployment
+        type: string
+      - name: CONTAINER_NAME
+        description: The name of deployment
+        type: string
+      - name: NAMESPACE
+        description: The namespace for the deployment
+        type: string
+      - name: IMAGE_URL
+        description: The image to be deployed
+  workspaces:
+  - name: workspace
+  steps:
+    - name: run-commands
+      image: quay.io/openshift/origin-cli:latest
+      script: |
+        #!/usr/bin/env bash
+
+        oc scale deployment/$(input.params.DEPLOYMENT_NAME) --replicas=0 -n $(input.params.NAMESPACE)
+        oc rollout status deployment/$(input.params.DEPLOYMENT_NAME) -n $(input.params.NAMESPACE)
+
+        oc apply -f $(workspaces.workspace.path)/$(input.params.CONFIG_DIR) -n $(input.params.NAMESPACE)
+        oc set image deployment/$(input.params.DEPLOYMENT_NAME) $(input.params.CONTAINER_NAME)=$(input.params.IMAGE_URL)
+
+        oc scale deployment/$(input.params.DEPLOYMENT_NAME) --replicas=1 -n $(input.params.NAMESPACE)
+        oc rollout status deployment/$(input.params.DEPLOYMENT_NAME) -n $(input.params.NAMESPACE)

@@ -4,35 +4,60 @@ metadata:
   name: petclinic-deploy-dev
 spec:
   params:
-    - name: APP_CONFIG_BASE_URL
+    - name: APP_SOURCE_GIT
       type: string
-      description: Base url for Spring Pet-Clinic k8s resources
-      default: https://raw.githubusercontent.com/siamaksade/spring-petclinic-config/dev
+      description: The application git repository
+      default: https://github.com/spring-projects/spring-petclinic
+    - name: APP_SOURCE_REVISION
+      type: string
+      description: The application git revision
+      default: master
+    - name: APP_CONFIG_GIT
+      type: string
+      description: The application configuration git repository
+      default: https://github.com/siamaksade/spring-petclinic-config
+    - name: APP_CONFIG_REVISION
+      type: string
+      description: The application configuration git revision
+      default: dev
+    - name: APP_TESTS_GIT
+      type: string
+      description: The application test cases git repository
+      default: https://github.com/siamaksade/spring-petclinic-gatling
   workspaces:
   - name: local-maven-repo
-  resources:
-  - name: app-git
-    type: git
-  - name: perf-tests-git
-    type: git
-  - name: app-image
-    type: image
+  - name: job-workspace
   tasks:
+  - name: git-source
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: src
+      workspace: job-workspace
+    params:
+    - name: url
+      value: $(params.APP_SOURCE_GIT)
+    - name: revision
+      value: $(params.APP_SOURCE_REVISION)
+    - name: depth
+      value: "0"
   - name: unit-tests
     taskRef:
       name: maven
+    runAfter:
+      - git-source
     workspaces:
     - name: maven-repo
       workspace: local-maven-repo
-    resources:
-      inputs:
-      - name: source
-        resource: app-git
+    - name: workspace
+      workspace: job-workspace
     params:
     - name: GOALS
       value: ["package"]
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
+    - name: PROJECT_DIR
+      value: src/spring-petclinic
   - name: release-app
     taskRef:
       name: maven
@@ -41,10 +66,8 @@ spec:
     workspaces:
     - name: maven-repo
       workspace: local-maven-repo
-    resources:
-      inputs:
-      - name: source
-        resource: app-git
+    - name: workspace
+      workspace: job-workspace
     params:
     - name: GOALS
       value:
@@ -54,6 +77,8 @@ spec:
       - -DaltSnapshotDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
+    - name: PROJECT_DIR
+      value: src/spring-petclinic
   - name: code-analysis
     taskRef:
       name: maven
@@ -62,10 +87,8 @@ spec:
     workspaces:
     - name: maven-repo
       workspace: local-maven-repo
-    resources:
-      inputs:
-      - name: source
-        resource: app-git
+    - name: workspace
+      workspace: job-workspace
     params:
     - name: GOALS
       value:
@@ -75,76 +98,140 @@ spec:
       - -Dsonar.userHome=/tmp/sonar
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
+    - name: PROJECT_DIR
+      value: src/spring-petclinic
   - name: gen-report
     taskRef:
-      name: gen-project-report
+      name: maven
     runAfter:
       - unit-tests
     workspaces:
     - name: maven-repo
       workspace: local-maven-repo
-    resources:
-      inputs:
-      - name: source
-        resource: app-git
+    - name: workspace
+      workspace: job-workspace
     params:
+    - name: GOALS
+      value:
+      - site
+      - -DskipTests
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
+    - name: PROJECT_DIR
+      value: src/spring-petclinic
+  - name: archive-report
+    taskRef:
+      name: archive-results
+    runAfter:
+      - gen-report
+    workspaces:
+    - name: workspace
+      workspace: job-workspace
+    params:
+    - name: RESULTS_DIR
+      value: src/spring-petclinic/target/site
   - name: build-image
     taskRef:
-      name: s2i-java-8
-      kind: ClusterTask
+      name: s2i-java-11
+    workspaces:
+    - name: workspace
+      workspace: job-workspace
     runAfter:
       - release-app
       - code-analysis
-      - gen-report
+      - archive-report
     params:
       - name: TLSVERIFY
         value: "false"
       - name: MAVEN_MIRROR_URL
         value: http://nexus:8081/repository/maven-public/
-    resources:
-      inputs:
-      - name: source
-        resource: app-git
-      outputs:
-      - name: image
-        resource: app-image
-  - name: deploy
+      - name: PATH_CONTEXT
+        value: src/spring-petclinic
+      - name: OUTPUT_IMAGE
+        value: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic
+  - name: git-config
     taskRef:
-      name: openshift-client
+      name: git-clone
     runAfter:
       - build-image
+    workspaces:
+    - name: src
+      workspace: job-workspace
     params:
-    - name: COMMANDS
-      value: |
-          oc scale deployment/spring-petclinic --replicas=0 -n demo-dev
-          oc rollout status deployment/spring-petclinic -n demo-dev
-
-          oc apply -f $(params.APP_CONFIG_BASE_URL)/app/deployment.yaml -n demo-dev
-          oc apply -f $(params.APP_CONFIG_BASE_URL)/app/service.yaml -n demo-dev
-          oc apply -f $(params.APP_CONFIG_BASE_URL)/app/route.yaml -n demo-dev
-
-          oc scale deployment/spring-petclinic --replicas=1 -n demo-dev
-          oc rollout status deployment/spring-petclinic -n demo-dev
-  - name: int-test
+    - name: url
+      value: $(params.APP_CONFIG_GIT)
+    - name: revision
+      value: $(params.APP_CONFIG_REVISION)
+  - name: deploy
     taskRef:
-      name: openshift-client
+      name: oc-redeploy
+    runAfter:
+      - git-config
+    workspaces:
+    - name: workspace
+      workspace: job-workspace
+    params:
+    - name: CONFIG_DIR
+      value: src/spring-petclinic-config/app
+    - name: DEPLOYMENT_NAME
+      value: spring-petclinic
+    - name: CONTAINER_NAME
+      value: spring-petclinic
+    - name: NAMESPACE
+      value: demo-dev
+    - name: IMAGE_URL
+      value: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic
+  - name: git-tests
+    taskRef:
+      name: git-clone
     runAfter:
       - deploy
+    workspaces:
+    - name: src
+      workspace: job-workspace
     params:
-    - name: COMMANDS
-      value: |
-          sleep $(($RANDOM % 20 + 10))
+    - name: url
+      value: $(params.APP_TESTS_GIT)
+  - name: int-test
+    taskRef:
+      name: maven
+    runAfter:
+      - git-tests
+    workspaces:
+    - name: maven-repo
+      workspace: local-maven-repo
+    - name: workspace
+      workspace: job-workspace
+    params:
+    - name: GOALS
+      value: ["verify"]
+    - name: MAVEN_SETTINGS_CONFIGMAP
+      value: custom-maven-settings
+    - name: PROJECT_DIR
+      value: src/spring-petclinic
   - name: perf-test
     taskRef:
       name: gatling
     runAfter:
-      - deploy
+      - git-tests
     params:
       - name: APP_URL
         value: "http://spring-petclinic.demo-dev.svc.cluster.local:8080"
-    resources:
-      inputs:
-      - name: simulations
-        resource: perf-tests-git
+      - name: SIMULATIONS_DIR
+        value: src/spring-petclinic-gatling
+      - name: SIMULATION_NAME
+        value: AddVisitSimulation
+      - name: RESULTS_DIR
+        value: output/gatling
+  - name: archive-test-result
+    taskRef:
+      name: archive-results
+    runAfter:
+      - perf-test
+      - int-test
+    workspaces:
+    - name: workspace
+      workspace: job-workspace
+    params:
+    - name: RESULTS_DIR
+      value: output/gatling
