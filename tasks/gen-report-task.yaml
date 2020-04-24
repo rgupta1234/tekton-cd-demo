@@ -1,29 +1,25 @@
 ---
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: gen-project-report
 spec:
   workspaces:
   - name: maven-repo
-  inputs:
-    params:
-    - name: MAVEN_SETTINGS_CONFIGMAP
-      description: The configmap containing Maven settings.xml
-      type: string
-      default: maven-settings
-    - name: REPORTS_REPO_HOST
-      description: The reports repository host based on https://github.com/chmouel/openshift-django-uploader
-      default: http://reports-repo:8080
-    - name: REPORTS_REPO_USERNAME
-      description: The reports repository username
-      default: reports
-    - name: REPORTS_REPO_PASSWORD
-      description: The reports repository password
-      default: reports
-    resources:
-    - name: source
-      type: git
+  params:
+  - name: MAVEN_SETTINGS_CONFIGMAP
+    description: The configmap containing Maven settings.xml
+    type: string
+    default: maven-settings
+  - name: REPORTS_REPO_HOST
+    description: The reports repository host based on https://github.com/chmouel/openshift-django-uploader
+    default: http://reports-repo:8080
+  - name: REPORTS_REPO_USERNAME
+    description: The reports repository username
+    default: reports
+  - name: REPORTS_REPO_PASSWORD
+    description: The reports repository password
+    default: reports
   steps:
     - name: mvn
       image: gcr.io/cloud-builders/mvn

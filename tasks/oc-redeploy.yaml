@@ -1,24 +1,23 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: oc-redeploy
 spec:
-  inputs:
-    params:
-      - name: CONFIG_DIR
-        description: The subdirectory containing the configurations
-        type: string
-      - name: DEPLOYMENT_NAME
-        description: The name of deployment
-        type: string
-      - name: CONTAINER_NAME
-        description: The name of deployment
-        type: string
-      - name: NAMESPACE
-        description: The namespace for the deployment
-        type: string
-      - name: IMAGE_URL
-        description: The image to be deployed
+  params:
+    - name: CONFIG_DIR
+      description: The subdirectory containing the configurations
+      type: string
+    - name: DEPLOYMENT_NAME
+      description: The name of deployment
+      type: string
+    - name: CONTAINER_NAME
+      description: The name of deployment
+      type: string
+    - name: NAMESPACE
+      description: The namespace for the deployment
+      type: string
+    - name: IMAGE_URL
+      description: The image to be deployed
   workspaces:
   - name: workspace
   steps:

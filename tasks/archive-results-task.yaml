@@ -1,24 +1,23 @@
 ---
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: archive-results
 spec:
   workspaces:
   - name: workspace
-  inputs:
-    params:
-    - name: REPORTS_REPO_HOST
-      description: The reports repository host based on https://github.com/chmouel/openshift-django-uploader
-      default: http://reports-repo:8080
-    - name: REPORTS_REPO_USERNAME
-      description: The reports repository username
-      default: reports
-    - name: REPORTS_REPO_PASSWORD
-      description: The reports repository password
-      default: reports
-    - name: RESULTS_DIR
-      description: The directory to upload to reports repository
+  params:
+  - name: REPORTS_REPO_HOST
+    description: The reports repository host based on https://github.com/chmouel/openshift-django-uploader
+    default: http://reports-repo:8080
+  - name: REPORTS_REPO_USERNAME
+    description: The reports repository username
+    default: reports
+  - name: REPORTS_REPO_PASSWORD
+    description: The reports repository password
+    default: reports
+  - name: RESULTS_DIR
+    description: The directory to upload to reports repository
   steps:
     - name: upload
       workingDir: $(workspaces.workspace.path)
