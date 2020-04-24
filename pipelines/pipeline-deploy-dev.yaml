@@ -28,11 +28,11 @@ spec:
   - name: local-maven-repo
   - name: job-workspace
   tasks:
-  - name: git-source
+  - name: git-clone-source
     taskRef:
       name: git-clone
     workspaces:
-    - name: src
+    - name: output
       workspace: job-workspace
     params:
     - name: url
@@ -41,11 +41,13 @@ spec:
       value: $(params.APP_SOURCE_REVISION)
     - name: depth
       value: "0"
+    - name: subdirectory
+      value: spring-petclinic
   - name: unit-tests
     taskRef:
       name: maven
     runAfter:
-      - git-source
+      - git-clone-source
     workspaces:
     - name: maven-repo
       workspace: local-maven-repo
@@ -57,7 +59,7 @@ spec:
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
     - name: PROJECT_DIR
-      value: src/spring-petclinic
+      value: spring-petclinic
   - name: release-app
     taskRef:
       name: maven
@@ -78,7 +80,7 @@ spec:
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
     - name: PROJECT_DIR
-      value: src/spring-petclinic
+      value: spring-petclinic
   - name: code-analysis
     taskRef:
       name: maven
@@ -99,7 +101,7 @@ spec:
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
     - name: PROJECT_DIR
-      value: src/spring-petclinic
+      value: spring-petclinic
   - name: gen-report
     taskRef:
       name: maven
@@ -118,7 +120,7 @@ spec:
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
     - name: PROJECT_DIR
-      value: src/spring-petclinic
+      value: spring-petclinic
   - name: archive-report
     taskRef:
       name: archive-results
@@ -129,7 +131,7 @@ spec:
       workspace: job-workspace
     params:
     - name: RESULTS_DIR
-      value: src/spring-petclinic/target/site
+      value: spring-petclinic/target/site
   - name: build-image
     taskRef:
       name: s2i-java-11
@@ -146,10 +148,10 @@ spec:
       - name: MAVEN_MIRROR_URL
         value: http://nexus:8081/repository/maven-public/
       - name: PATH_CONTEXT
-        value: src/spring-petclinic
+        value: spring-petclinic
       - name: OUTPUT_IMAGE
         value: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic
-  - name: git-config
+  - name: git-clone-config
     taskRef:
       name: git-clone
     runAfter:
@@ -166,13 +168,13 @@ spec:
     taskRef:
       name: oc-redeploy
     runAfter:
-      - git-config
+      - git-clone-config
     workspaces:
     - name: workspace
       workspace: job-workspace
     params:
     - name: CONFIG_DIR
-      value: src/spring-petclinic-config/app
+      value: spring-petclinic-config/app
     - name: DEPLOYMENT_NAME
       value: spring-petclinic
     - name: CONTAINER_NAME
@@ -208,7 +210,7 @@ spec:
     - name: MAVEN_SETTINGS_CONFIGMAP
       value: custom-maven-settings
     - name: PROJECT_DIR
-      value: src/spring-petclinic
+      value: spring-petclinic
   - name: perf-test
     taskRef:
       name: gatling
@@ -218,7 +220,7 @@ spec:
       - name: APP_URL
         value: "http://spring-petclinic.demo-dev.svc.cluster.local:8080"
       - name: SIMULATIONS_DIR
-        value: src/spring-petclinic-gatling
+        value: spring-petclinic-gatling
       - name: SIMULATION_NAME
         value: AddVisitSimulation
       - name: RESULTS_DIR
