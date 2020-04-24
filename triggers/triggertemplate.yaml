@@ -16,7 +16,19 @@ spec:
   - name: contenttype
     description: The Content-Type of the event
   resourcetemplates:
-  - apiVersion: tekton.dev/v1alpha1
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: petclinic-deploy-dev-pvc-$(params.gitrevision)
+    spec:
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+      accessModes:
+        - ReadWriteOnce
+      persistentVolumeReclaimPolicy: Delete
+  - apiVersion: tekton.dev/v1beta1
     kind: PipelineRun
     metadata:
       generateName: petclinic-deploy-dev-run-
@@ -35,4 +47,5 @@ spec:
         persistentVolumeClaim:
           claimName: maven-repo-pvc
       - name: job-workspace
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: petclinic-deploy-dev-pvc-$(params.gitrevision)

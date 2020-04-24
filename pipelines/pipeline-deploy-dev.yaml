@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: petclinic-deploy-dev
@@ -32,7 +32,7 @@ spec:
     taskRef:
       name: git-clone
     workspaces:
-    - name: output
+    - name: workspace
       workspace: job-workspace
     params:
     - name: url
@@ -102,7 +102,7 @@ spec:
       value: custom-maven-settings
     - name: PROJECT_DIR
       value: spring-petclinic
-  - name: gen-report
+  - name: gen-project-report
     taskRef:
       name: maven
     runAfter:
@@ -125,7 +125,7 @@ spec:
     taskRef:
       name: archive-results
     runAfter:
-      - gen-report
+      - gen-project-report
     workspaces:
     - name: workspace
       workspace: job-workspace
@@ -140,8 +140,6 @@ spec:
       workspace: job-workspace
     runAfter:
       - release-app
-      - code-analysis
-      - archive-report
     params:
       - name: TLSVERIFY
         value: "false"
@@ -150,14 +148,16 @@ spec:
       - name: PATH_CONTEXT
         value: spring-petclinic
       - name: OUTPUT_IMAGE
-        value: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic
+        value: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic:$(tasks.git-clone-source.results.short-commit)
   - name: git-clone-config
     taskRef:
       name: git-clone
     runAfter:
       - build-image
+      - code-analysis
+      - archive-report
     workspaces:
-    - name: src
+    - name: workspace
       workspace: job-workspace
     params:
     - name: url
@@ -183,13 +183,13 @@ spec:
       value: demo-dev
     - name: IMAGE_URL
       value: image-registry.openshift-image-registry.svc:5000/demo-dev/spring-petclinic
-  - name: git-tests
+  - name: git-clone-tests
     taskRef:
       name: git-clone
     runAfter:
       - deploy
     workspaces:
-    - name: src
+    - name: workspace
       workspace: job-workspace
     params:
     - name: url
@@ -198,7 +198,7 @@ spec:
     taskRef:
       name: maven
     runAfter:
-      - git-tests
+      - git-clone-tests
     workspaces:
     - name: maven-repo
       workspace: local-maven-repo
@@ -215,7 +215,7 @@ spec:
     taskRef:
       name: gatling
     runAfter:
-      - git-tests
+      - git-clone-tests
     params:
       - name: APP_URL
         value: "http://spring-petclinic.demo-dev.svc.cluster.local:8080"

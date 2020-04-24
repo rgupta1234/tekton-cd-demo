@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1alpha1
+apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: petclinic-deploy-stage
@@ -32,7 +32,7 @@ spec:
     runAfter:
       - promote-stage
     workspaces:
-    - name: src
+    - name: workspace
       workspace: job-workspace
     params:
     - name: url

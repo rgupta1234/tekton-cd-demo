@@ -21,11 +21,6 @@ spec:
     type: string
     default: src
   steps:
-    - name: list
-      image: gcr.io/cloud-builders/mvn
-      command: ["find"]
-      args:
-        - /workspace
     - name: mvn
       image: gcr.io/cloud-builders/mvn
       workingDir: $(workspaces.workspace.path)/$(inputs.params.PROJECT_DIR)

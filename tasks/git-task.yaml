@@ -4,7 +4,7 @@ metadata:
   name: git-clone
 spec:
   workspaces:
-  - name: output
+  - name: workspace
     description: The git repo will be cloned onto the volume backing this workspace
   params:
   - name: url
@@ -27,7 +27,7 @@ spec:
     type: string
     default: "true"
   - name: subdirectory
-    description: subdirectory inside the "output" workspace to clone the git repo into
+    description: subdirectory inside the workspace to clone the git repo into
     type: string
     default: ""
   - name: deleteExisting
@@ -37,11 +37,13 @@ spec:
   results:
   - name: commit
     description: The precise commit SHA that was fetched by this Task
+  - name: short-commit
+    description: The short commit SHA that was fetched by this Task
   steps:
   - name: clone
     image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.11.0
     script: |
-      CHECKOUT_DIR="$(workspaces.output.path)/$(params.subdirectory)"
+      CHECKOUT_DIR="$(workspaces.workspace.path)/$(params.subdirectory)"
 
       cleandir() {
         # Delete any existing contents of the repo directory if it exists.
@@ -71,6 +73,7 @@ spec:
         -depth="$(params.depth)"
       cd "$CHECKOUT_DIR"
       RESULT_SHA="$(git rev-parse HEAD | tr -d '\n')"
+      RESULT_SHORT_SHA="$(git rev-parse --short HEAD | tr -d '\n')"
       EXIT_CODE="$?"
       if [ "$EXIT_CODE" != 0 ]
       then
@@ -78,3 +81,4 @@ spec:
       fi
       # Make sure we don't add a trailing newline to the result!
       echo -n "$RESULT_SHA" > $(results.commit.path)
+      echo -n "$RESULT_SHORT_SHA" > $(results.short-commit.path)

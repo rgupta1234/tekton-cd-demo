@@ -1,7 +1,21 @@
-apiVersion: tekton.dev/v1alpha1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: petclinic-deploy-dev-pvc-RANDOM
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+---
+apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  generateName: petclinic-deploy-dev-run-
+  name: petclinic-deploy-dev-run-RANDOM
 spec:
   pipelineRef:
     name: petclinic-deploy-dev
@@ -11,4 +25,5 @@ spec:
     persistentVolumeClaim:
       claimName: maven-repo-pvc
   - name: job-workspace
-    emptyDir: {}
+    persistentVolumeClaim:
+      claimName: petclinic-deploy-dev-pvc-RANDOM

@@ -148,7 +148,9 @@ EOF
 }
 
 command.start() {
-  oc create -f runs/pipeline-deploy-dev-run.yaml -n $cicd_prj
+  # RANDOM=$(echo "$(history)$(date +%s)"|shasum|head -c 8)
+  RANDOM="$(cat /dev/random | LC_CTYPE=C tr -dc "[:alpha:]" | head -c 8)"
+  sed "s/RANDOM/$RANDOM/g" runs/pipeline-deploy-dev-run.yaml | oc create -n $cicd_prj -f -
 }
 
 command.uninstall() {
