@@ -1,3 +1,11 @@
+1  git clone https://github.com/siamaksade/tekton-cd-demo.git
+2  cd tekton-cd-demo/
+3  git status
+4  oc new-project demo
+5  ll
+6  bash demo.sh install
+   bash demo.sh start
+
 # CI/CD Demo with Tekton Pipelines
 
 This repo is a sample [Tekton](http://www.tekton.dev) pipeline that builds and deploys the [Spring PetClinic](https://github.com/spring-projects/spring-petclinic) sample Spring Boot application on OpenShift. This demo creates:
